@@ -294,6 +294,93 @@ class BiLSTM_Label(nn.Module):
         out = self.out(conc)
         return out
 
+class Training:
+    def __init__(self,  model, loss_fn, optimizer,  train_loader, test_loader):
+        self.model = model
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.seed_val = 42
+
+    def training(self):
+        training_stats = self.train_model(model, train_loader, test_loader)
+        df_stats = self.print_stats(training_stats)
+        return df_stats
+        
+
+    def train_model(self, model, train_loader, test_loader):
+        random.seed(self.seed_val)
+        np.random.seed(self.seed_val)
+        torch.manual_seed(self.seed_val)
+        torch.cuda.manual_seed_all(self.seed_val)
+
+        training_stats = []
+
+        # Measure the total training time for the whole run.
+        start_time = time.time()
+        epoch_i = 0
+
+        while True:
+            t0 = time.time()
+            total_train_loss = 0
+            self.model.train()
+
+            for step,  (x_batch, y_batch) in enumerate(self.train_loader):
+                self.model.zero_grad()        
+                y_pred = self.model(x_batch)
+                loss  = loss_fn(y_pred, y_batch)
+                optimizer.zero_grad()
+                total_train_loss += loss.item()
+                loss.backward()
+                optimizer.step()
+            avg_train_loss = total_train_loss / len(self.train_loader)            
+            training_time = format_time(time.time() - t0)
+            t0 = time.time()
+            self.model.eval()
+
+            total_eval_accuracy = 0
+            total_eval_loss = 0
+            nb_eval_steps = 0
+
+            for i, (x_batch, y_batch) in enumerate(self.test_loader):
+                with torch.no_grad():        
+                    y_pred = self.model(x_batch).detach()
+                total_eval_loss += loss_fn(y_pred,y_batch).item()
+                y_pred = y_pred.detach().cpu().numpy()
+                label_ids = y_batch.to('cpu').numpy()
+                total_eval_accuracy += flat_accuracy(y_pred, label_ids)
+
+            avg_test_accuracy = total_eval_accuracy / len(self.test_loader)   
+            avg_test_loss = total_eval_loss / len(self.test_loader)
+            if epoch_i == 0:
+                min_test_loss = avg_test_loss
+            else:
+                if min_test_loss >= avg_test_loss:
+                    min_test_loss = avg_test_loss
+                else:
+                    break
+            test_time = format_time(time.time() - t0)
+            training_stats.append(
+                {
+                    'epoch': epoch_i + 1,
+                    'Train. Loss': avg_train_loss,
+                    'Test. Loss': avg_test_loss,
+                    'Test. Acc.': avg_test_accuracy
+                }
+            )
+            epoch_i = epoch_i + 1
+        print("")
+        print("Training complete!")
+        print("Total Training time {:} (h:mm:ss)".format(format_time(time.time()-start_time)))
+        return training_stats
+
+
+    def print_stats(self, stats):
+        pd.set_option('precision', 4)
+        df_stats = pd.DataFrame(data = stats)
+        df_stats = df_stats.set_index('epoch')
+        return df_stats
 
 if __name__ == "__main__":
     column_dict = {'name': 0, 'keyword': 1, 'description': 2}
