@@ -3,21 +3,21 @@
 ## Developing Data-conscious Deep Learning Models for Product  Classification
 - author: Yijin Kim; Hong Joo Lee; Junho Shim
 - Applied Sciences
-- [_paper link_]()📎
+<!-- - [_paper link_]()📎 -->
 
 
 
-
+<!-- 
 ### Features
 _description_
 _figure_
-
-
+ -->
+<!-- 
 #### File
 | Filename | Description |
 | ------ | ------ |
 | Dropbox | [plugins/dropbox/README.md][PlDb] |
-
+ -->
 
 #### Requirements
 - python
